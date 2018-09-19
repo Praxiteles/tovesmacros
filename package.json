@@ -1,0 +1,27 @@
+{
+  "name": "gtove-chat",
+  "version": "0.1.0",
+  "homepage": "http://165.227.3.100:2382/",
+  "private": true,
+  "dependencies": {
+    "csv-parse": "^3.0.0",
+    "react": "^16.5.0",
+    "react-dom": "^16.5.0",
+    "react-scripts-ts": "2.17.0",
+    "react-select": "^2.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts-ts start",
+    "build": "react-scripts-ts build",
+    "test": "react-scripts-ts test --env=jsdom",
+    "eject": "react-scripts-ts eject"
+  },
+  "devDependencies": {
+    "@types/jest": "^23.3.2",
+    "@types/node": "^10.9.4",
+    "@types/react": "^16.4.13",
+    "@types/react-dom": "^16.0.7",
+    "@types/react-select": "^2.0.3",
+    "typescript": "^3.0.3"
+  }
+}
