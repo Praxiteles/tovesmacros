@@ -1,26 +1,13 @@
 import * as React from 'react';
 import Select from 'react-select';
 
-import * as parse from 'csv-parse';
 import 'whatwg-fetch';
 import MessageBox from './messageBox';
+import SheetsApi from './util/sheets';
 
 import './chatBox.css';
 
 /* tslint:disable:no-console */
-
-// Async parse function
-function aparse(csv: string): any {
-    return new Promise<any>((resolve, reject) => {
-        parse(csv, (err, res) => {
-            if (err) {
-                return reject(err);
-            }
-
-            resolve(res);
-        });
-    });
-}
 
 export interface IMessage {
     author: string;
@@ -37,6 +24,7 @@ export interface IChatBoxState {
     messages: IMessage[];
     options: any[];
     selectValue: ISelectValue | null;
+    sheets: SheetsApi | null;
 }
 
 export default class ChatBox extends React.Component<any, IChatBoxState> {
@@ -52,26 +40,21 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             messages: [],
             options: [],
             selectValue: null,
+            sheets: null,
         };
     }
 
     public componentDidMount() {
-        // Fetch macros
-        this.readMacros().catch((e) => {
-            console.error('Error reading macros: ' + e);
+        // Init google api
+        (window as any).gapi.load('auth2', () => {
+            this.setState({
+                sheets: new SheetsApi(this.readMacros),
+            });
         });
     }
 
-    public readMacros = async () => {
-        // TODO: Temporary URL, will need to fetch from Google Drive
-        const res = await fetch('https://cors-anywhere.herokuapp.com/https://transfer.sh/s6LbB/macros.csv',
-            { headers: {'X-Requested-With': 'https://github.com/RobRendell/gTove'}
-        });
-
-        const csv = await res.text();
-        const macros: string[][] = await aparse(csv);
-
-        const options = macros.slice(1).map((spell, i) => {
+    public readMacros = async (values: string[][]) => {
+        const options = values.slice(1).map((spell, i) => {
             if (spell[1] !== 'url') {
                 return;
             }
@@ -151,25 +134,42 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
     }
 
     public render() {
+        let handleAuthClick: (e: any) => void;
+
+        if (!this.state.sheets) {
+            handleAuthClick = (e) => null;
+        } else {
+            handleAuthClick = this.state.sheets.handleAuthClick;
+        }
+
         return (
             <div className='chatBox'>
                 <MessageBox {...this.state} />
 
-                <Select
-                    placeholder='Say something'
-                    options={this.state.options}
-                    value={this.state.selectValue}
-                    inputValue={this.state.inputValue}
-                    className='chatSelect'
-                    menuPlacement='top'
-                    onChange={this.handleChange}
-                    onKeyDown={this.handleKeyDown}
-                    onInputChange={this.handleInputChange}
-                    noOptionsMessage={() => null}
-                    components={{ DropdownIndicator: null }}
-                    onBlur={this.handleBlur}
-                    onFocus={this.handleFocus}
-                />
+                <div className='inputArea'>
+                    <Select
+                        className='chatSelect'
+                        placeholder='Say something'
+                        options={this.state.options}
+                        value={this.state.selectValue}
+                        inputValue={this.state.inputValue}
+                        menuPlacement='top'
+                        onChange={this.handleChange}
+                        onKeyDown={this.handleKeyDown}
+                        onInputChange={this.handleInputChange}
+                        noOptionsMessage={() => null}
+                        components={{ DropdownIndicator: null }}
+                        onBlur={this.handleBlur}
+                        onFocus={this.handleFocus}
+                    />
+
+                    <a className='gear' href='#' onClick={handleAuthClick} /*data-tip={true} data-event='click'*/>
+                        <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'>
+                            <path fill='none' d='M0 0h20v20H0V0z'/>
+                            <path d='M15.95 10.78c.03-.25.05-.51.05-.78s-.02-.53-.06-.78l1.69-1.32c.15-.12.19-.34.1-.51l-1.6-2.77c-.1-.18-.31-.24-.49-.18l-1.99.8c-.42-.32-.86-.58-1.35-.78L12 2.34c-.03-.2-.2-.34-.4-.34H8.4c-.2 0-.36.14-.39.34l-.3 2.12c-.49.2-.94.47-1.35.78l-1.99-.8c-.18-.07-.39 0-.49.18l-1.6 2.77c-.1.18-.06.39.1.51l1.69 1.32c-.04.25-.07.52-.07.78s.02.53.06.78L2.37 12.1c-.15.12-.19.34-.1.51l1.6 2.77c.1.18.31.24.49.18l1.99-.8c.42.32.86.58 1.35.78l.3 2.12c.04.2.2.34.4.34h3.2c.2 0 .37-.14.39-.34l.3-2.12c.49-.2.94-.47 1.35-.78l1.99.8c.18.07.39 0 .49-.18l1.6-2.77c.1-.18.06-.39-.1-.51l-1.67-1.32zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z'/>
+                        </svg>
+                    </a>
+                </div>
             </div>
         );
     }

@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { IChatBoxState, IMessage } from './chatBox';
 
+import './messageBox.css';
+
 interface IMessageBoxState {
     messages: IMessage[];
 }
