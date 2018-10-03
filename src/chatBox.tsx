@@ -59,9 +59,17 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
                 return;
             }
 
+            let label = spell[0];
+
+            if (spell[3].includes('roll20')) {
+                label += ' (Roll20)';
+            } else {
+                label += ' (DnD Beyond)';
+            }
+
             return {
-                label: spell[0],
-                value: <a target='_blank' href={spell[3]}>{spell[0]}</a>,
+                label,
+                value: <a target='_blank' href={spell[3]}>{label}</a>,
             };
         });
 
