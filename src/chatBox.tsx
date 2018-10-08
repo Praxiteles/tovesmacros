@@ -1,4 +1,5 @@
 import * as React from 'react';
+import * as Modal from 'react-modal';
 import Select from 'react-select';
 
 import 'whatwg-fetch';
@@ -8,6 +9,7 @@ import SheetsApi from './util/sheets';
 import './chatBox.css';
 
 /* tslint:disable:no-console */
+Modal.setAppElement('#root');
 
 export interface IMessage {
     author: string;
@@ -19,12 +21,21 @@ export interface ISelectValue {
     value: any;
 }
 
+interface IMacro {
+    sheetKey: number;
+    values: string[][];
+}
+
 export interface IChatBoxState {
+    emptySheets: number;
     inputValue: string;
+    macros: IMacro[];
     messages: IMessage[];
     options: any[];
     selectValue: ISelectValue | null;
+    settingsOpen: boolean,
     sheets: SheetsApi | null;
+    spreadsheets: string[];
 }
 
 export default class ChatBox extends React.Component<any, IChatBoxState> {
@@ -36,11 +47,15 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
         this.blurred = false;
 
         this.state = {
+            emptySheets: 0,
             inputValue: '',
+            macros: [],
             messages: [],
             options: [],
             selectValue: null,
+            settingsOpen: false,
             sheets: null,
+            spreadsheets: [],
         };
     }
 
@@ -48,13 +63,28 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
         // Init google api
         (window as any).gapi.load('auth2', () => {
             this.setState({
-                sheets: new SheetsApi(this.readMacros),
+                sheets: new SheetsApi(this.updateSheets),
             });
         });
     }
 
+    public updateSheets = (url: string, values: string[][]) => {
+        const { emptySheets, macros, spreadsheets } = this.state;
+
+        const macro: IMacro = {
+            sheetKey: spreadsheets.length,
+            values,
+        };
+
+        this.setState({
+            emptySheets: emptySheets - 1,
+            macros: macros.concat(macro),
+            spreadsheets: spreadsheets.concat(url),
+        });
+    }
+
     public readMacros = async (values: string[][]) => {
-        const options = values.slice(1).map((spell, i) => {
+        const options = values.map((spell, i) => {
             if (spell[1] !== 'url') {
                 return;
             }
@@ -73,8 +103,20 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             };
         });
 
+        const filtered = options.filter((el) => el !== undefined) as ISelectValue[];
+
+        filtered.sort((a, b) => {
+            if (a.label > b.label) {
+                return 1;
+            } else if (a.label < b.label) {
+                return -1;
+            } else {
+                return 0;
+            }
+        });
+
         this.setState({
-            options: options.filter((el) => el !== undefined),
+            options: filtered,
         });
 
         console.log('Loaded macros!');
@@ -141,6 +183,62 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
         this.blurred = false;
     }
 
+    public openModal = () => {
+        this.setState({
+            settingsOpen: true,
+        });
+    }
+
+    public closeModal = () => {
+        this.setState({
+            emptySheets: 0,
+            settingsOpen: false,
+        });
+    }
+
+    public toggleModal = () => {
+        if (this.state.settingsOpen) {
+            this.closeModal();
+        } else {
+            this.openModal();
+        }
+    }
+
+    public addEmpty = () => {
+        this.setState({
+            emptySheets: this.state.emptySheets + 1,
+        });
+    }
+
+    public saveSheets = () => {
+        const { macros, spreadsheets } = this.state;
+
+        let combinedMacros: string[][] = [];
+
+        for (let i = 0; i < spreadsheets.length; i++) {
+            let macro;
+
+            for (const currMacro of macros) {
+                if (currMacro.sheetKey === i) {
+                    macro = currMacro;
+                    break;
+                }
+            }
+
+            if (!macro) {
+                continue;
+            }
+
+            combinedMacros = combinedMacros.concat(macro.values);
+        }
+
+        if (combinedMacros.length > 0) {
+            this.readMacros(combinedMacros);
+        }
+
+        this.closeModal();
+    }
+
     public render() {
         let handleAuthClick: (e: any) => void;
 
@@ -148,6 +246,16 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             handleAuthClick = (e) => null;
         } else {
             handleAuthClick = this.state.sheets.handleAuthClick;
+        }
+
+        const emptySheets = [];
+        for (let i = 0; i < this.state.emptySheets; i++) {
+            emptySheets.push(
+                <div className='sheet' key={i}>
+                    <input placeholder='Spreadsheet URL' />
+                    <a href='#' onClick={handleAuthClick}>Import</a>
+                </div>
+            );
         }
 
         return (
@@ -171,13 +279,33 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
                         onFocus={this.handleFocus}
                     />
 
-                    <a className='gear' href='#' onClick={handleAuthClick} /*data-tip={true} data-event='click'*/>
+                    <a className='gear' href='#' onClick={this.toggleModal} /*data-tip={true} data-event='click'*/>
                         <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'>
                             <path fill='none' d='M0 0h20v20H0V0z'/>
                             <path d='M15.95 10.78c.03-.25.05-.51.05-.78s-.02-.53-.06-.78l1.69-1.32c.15-.12.19-.34.1-.51l-1.6-2.77c-.1-.18-.31-.24-.49-.18l-1.99.8c-.42-.32-.86-.58-1.35-.78L12 2.34c-.03-.2-.2-.34-.4-.34H8.4c-.2 0-.36.14-.39.34l-.3 2.12c-.49.2-.94.47-1.35.78l-1.99-.8c-.18-.07-.39 0-.49.18l-1.6 2.77c-.1.18-.06.39.1.51l1.69 1.32c-.04.25-.07.52-.07.78s.02.53.06.78L2.37 12.1c-.15.12-.19.34-.1.51l1.6 2.77c.1.18.31.24.49.18l1.99-.8c.42.32.86.58 1.35.78l.3 2.12c.04.2.2.34.4.34h3.2c.2 0 .37-.14.39-.34l.3-2.12c.49-.2.94-.47 1.35-.78l1.99.8c.18.07.39 0 .49-.18l1.6-2.77c.1-.18.06-.39-.1-.51l-1.67-1.32zM10 13c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z'/>
                         </svg>
                     </a>
                 </div>
+
+                <Modal
+                    className='modal'
+                    overlayClassName='modalOverlay'
+                    isOpen={this.state.settingsOpen}
+                >
+                    <h2>Spreadsheets</h2>
+
+                    {this.state.spreadsheets.map((s, i) =>
+                        <div className='sheet' key={i}>
+                            <input defaultValue={s} />
+                            <a href='#' onClick={handleAuthClick}>Import</a>
+                        </div>
+                    )}
+
+                    {emptySheets}
+
+                    <a className='addSheet' href='#' onClick={this.addEmpty}>+</a>
+                    <button className='saveSheets' onClick={this.saveSheets}>Save</button>
+                </Modal>
             </div>
         );
     }
