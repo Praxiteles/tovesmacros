@@ -22,7 +22,8 @@ export interface ISelectValue {
 export interface IChatBoxState {
     inputValue: string;
     messages: IMessage[];
-    options: any[];
+    options: ISelectValue[];
+    options_backup: ISelectValue[];
     selectValue: ISelectValue | null;
     sheets: SheetsApi | null;
 }
@@ -39,6 +40,7 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             inputValue: '',
             messages: [],
             options: [],
+            options_backup: [],
             selectValue: null,
             sheets: null,
         };
@@ -73,8 +75,11 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             };
         });
 
+        const defined = options.filter((el) => el !== undefined) as any;
+
         this.setState({
-            options: options.filter((el) => el !== undefined),
+            options: defined,
+            options_backup: defined,
         });
 
         console.log('Loaded macros!');
@@ -141,6 +146,52 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
         this.blurred = false;
     }
 
+    public filterOptions = (candidate: any, input: string): boolean => {
+        const { options, options_backup } = this.state;
+        // console.log(input);
+        // console.log(candidate.label);
+        const match = (label: string) =>
+            input.toLowerCase() === label.slice(0, input.length).toLowerCase();
+
+        if (input && match(candidate.label)) {
+            console.log('AAAYYY');
+            const newOptions = [...options];
+            let removed: ISelectValue = {} as ISelectValue;
+
+            for (let i = 0; i < newOptions.length; i++) {
+                if (newOptions[i].label === candidate.label) {
+                    removed = newOptions.splice(i, 1)[0];
+                    break;
+                }
+            }
+
+            for (let i = 0; i < newOptions.length; i++) {
+                if (match(newOptions[i].label)) {
+                    continue;
+                }
+
+                newOptions.splice(i, 0, removed);
+            }
+
+            console.log(newOptions);
+
+            this.setState({
+                options: newOptions,
+            });
+
+            return true;
+            // return candidate.label === input;
+        } else if (input && candidate.label.includes(input)) {
+            return true;
+        } else if (!input && options !== options_backup) {
+            this.setState({
+                options: options_backup,
+            });
+        }
+
+        return false;
+    }
+
     public render() {
         let handleAuthClick: (e: any) => void;
 
@@ -169,6 +220,7 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
                         components={{ DropdownIndicator: null }}
                         onBlur={this.handleBlur}
                         onFocus={this.handleFocus}
+                        filterOption={this.filterOptions}
                     />
 
                     <a className='gear' href='#' onClick={handleAuthClick} /*data-tip={true} data-event='click'*/>
