@@ -148,45 +148,55 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
 
     public filterOptions = (candidate: any, input: string): boolean => {
         const { options, options_backup } = this.state;
-        // console.log(input);
-        // console.log(candidate.label);
-        const match = (label: string) =>
-            input.toLowerCase() === label.slice(0, input.length).toLowerCase();
 
-        if (input && match(candidate.label)) {
-            console.log('AAAYYY');
-            const newOptions = [...options];
-            let removed: ISelectValue = {} as ISelectValue;
+        if (input === '') {
+            this.setState({
+                options: options_backup,
+            });
 
+            return true;
+        }
+
+        if (candidate.label.toLowerCase().includes(input.toLowerCase())) {
+            const first: ISelectValue[] = [];
+            const end: ISelectValue[] = [];
+
+            for (const option of options_backup) {
+                let exact = true;
+
+                for (let i = 0; i < input.length; i++) {
+                    if (input[i].toLowerCase() !== option.label[i].toLowerCase()) {
+                        exact = false;
+                        break;
+                    }
+                }
+
+                if (exact) {
+                    first.push(option);
+                } else if (option.label.toLowerCase().includes(input.toLowerCase())) {
+                    end.push(option);
+                }
+            }
+
+            const newOptions = first.concat(end);
+
+            // Check if options is already sorted like newOptions
+            let equal = true;
             for (let i = 0; i < newOptions.length; i++) {
-                if (newOptions[i].label === candidate.label) {
-                    removed = newOptions.splice(i, 1)[0];
+                if (newOptions[i].label !== options[i].label) {
+                    equal = false;
                     break;
                 }
             }
 
-            for (let i = 0; i < newOptions.length; i++) {
-                if (match(newOptions[i].label)) {
-                    continue;
-                }
-
-                newOptions.splice(i, 0, removed);
+            // Only set state if necessary
+            if (!equal) {
+                this.setState({
+                    options: newOptions,
+                });
             }
 
-            console.log(newOptions);
-
-            this.setState({
-                options: newOptions,
-            });
-
             return true;
-            // return candidate.label === input;
-        } else if (input && candidate.label.includes(input)) {
-            return true;
-        } else if (!input && options !== options_backup) {
-            this.setState({
-                options: options_backup,
-            });
         }
 
         return false;
