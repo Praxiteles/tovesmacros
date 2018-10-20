@@ -31,7 +31,8 @@ export interface IChatBoxState {
     inputValue: string;
     macros: IMacro[];
     messages: IMessage[];
-    options: any[];
+    options: ISelectValue[];
+    options_backup: ISelectValue[];
     selectValue: ISelectValue | null;
     settingsOpen: boolean,
     sheets: SheetsApi | null;
@@ -52,6 +53,7 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
             macros: [],
             messages: [],
             options: [],
+            options_backup: [],
             selectValue: null,
             settingsOpen: false,
             sheets: null,
@@ -117,6 +119,7 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
 
         this.setState({
             options: filtered,
+            options_backup: filtered,
         });
 
         console.log('Loaded macros!');
@@ -239,6 +242,62 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
         this.closeModal();
     }
 
+    public filterOptions = (candidate: any, input: string): boolean => {
+        const { options, options_backup } = this.state;
+
+        if (input === '') {
+            this.setState({
+                options: options_backup,
+            });
+
+            return true;
+        }
+
+        if (candidate.label.toLowerCase().includes(input.toLowerCase())) {
+            const first: ISelectValue[] = [];
+            const end: ISelectValue[] = [];
+
+            for (const option of options_backup) {
+                let exact = true;
+
+                for (let i = 0; i < input.length; i++) {
+                    if (input[i].toLowerCase() !== option.label[i].toLowerCase()) {
+                        exact = false;
+                        break;
+                    }
+                }
+
+                if (exact) {
+                    first.push(option);
+                } else if (option.label.toLowerCase().includes(input.toLowerCase())) {
+                    end.push(option);
+                }
+            }
+
+            const newOptions = first.concat(end);
+
+            // Check if options is already sorted like newOptions
+            let equal = true;
+            for (let i = 0; i < newOptions.length; i++) {
+                if (newOptions[i].label !== options[i].label) {
+                    equal = false;
+                    break;
+                }
+            }
+
+            // Only set state if necessary
+            if (!equal) {
+                this.setState({
+                    options: newOptions,
+                });
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     public render() {
         let handleAuthClick: (e: any) => void;
 
@@ -277,6 +336,7 @@ export default class ChatBox extends React.Component<any, IChatBoxState> {
                         components={{ DropdownIndicator: null }}
                         onBlur={this.handleBlur}
                         onFocus={this.handleFocus}
+                        filterOption={this.filterOptions}
                     />
 
                     <a className='gear' href='#' onClick={this.toggleModal} /*data-tip={true} data-event='click'*/>
