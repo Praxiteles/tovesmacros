@@ -11,11 +11,11 @@ let google: any;
 export default class SheetsApi {
     private pickerLoaded: boolean;
     private oauthToken: string;
-    private readMacros: (values: string[][]) => void;
+    private updateSheets: (url: string, values: string[][]) => void;
 
-    constructor(readMacros: (values: string[][]) => void) {
+    constructor(updateSheets: (url: string, values: string[][]) => void) {
         this.pickerLoaded = false;
-        this.readMacros = readMacros;
+        this.updateSheets = updateSheets;
 
         gapi.load('picker', () => {
             google = (window as any).google;
@@ -77,7 +77,7 @@ export default class SheetsApi {
                 spreadsheetId: doc.id,
             });
 
-            this.readMacros(result.values);
+            this.updateSheets(doc.url, result.values);
         }
     }
 }

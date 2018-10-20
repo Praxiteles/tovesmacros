@@ -47,3 +47,42 @@
   top: auto;
   bottom: 100%;
 }
+
+.modalOverlay {
+  z-index: 10;
+}
+
+.modal {
+  position: absolute;
+  margin: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 500px;
+  height: 500px;
+  box-shadow: 5px 5px 5px 0px rgba(0,0,0,0.75);
+  border-radius: 5px;
+  border: 2px solid black;
+  padding: 50px;
+  background-color: white;
+}
+
+.modal .sheet {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.modal .sheet input {
+  margin-right: 10px;
+}
+
+.addSheet {
+  text-decoration: none;
+}
+
+.saveSheets {
+  display: block;
+  margin-top: 10px;
+}
